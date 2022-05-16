@@ -17,4 +17,5 @@
 .endif
 .ifdef W65C_SXB
 .include "w65c_sxb_loadsave.s"
+.include "w65c_sxb_io.s"
 .endif

@@ -148,8 +148,13 @@ COLD_START:
         ldx     #GENERIC_CHRGET_END-GENERIC_CHRGET
   .endif
 .else
+  .ifdef CONFIG_FIX_INIT_COPY
+        ldx     #GENERIC_CHRGET_END-GENERIC_CHRGET
+  .else
         ldx     #GENERIC_CHRGET_END-GENERIC_CHRGET-1 ; XXX
+  .endif
 .endif
+; Copy CHRGET and the random seed.
 L4098:
         lda     GENERIC_CHRGET-1,x
         sta     CHRGET-1,x
@@ -217,7 +222,7 @@ L4098:
         jsr     CHRGET
   .ifndef AIM65
     .ifndef SYM1
-        cmp     #$41
+        cmp     #'A'
         beq     PR_WRITTEN_BY
     .endif
   .endif
@@ -261,6 +266,21 @@ L40D7:
         beq     L40FA
 .endif
 L40DD:
+
+.if .def(W65C_SXB)
+; Limit the amount of memory used to prevent overwriting the
+; ROM monitor work RAM.
+      lda       LINNUM+1
+      cmp       #>RAMEND
+      bne       @Continue
+
+      ; Check the LSB.
+      lda       LINNUM
+      cmp       #<RAMEND
+      beq       L40FA
+@Continue:
+.endif
+
 .ifdef CONFIG_2
         lda     #$55 ; 01010101 / 10101010
 .else
@@ -513,7 +533,7 @@ QT_BASIC:
         .byte   CR,CR,0
   .endif
   .ifdef W65C_SXB
-        .byte   "MICROSOFT BASIC V1.1 FOR WC65Cx-SXB"
+        .byte   "MICROSOFT BASIC V1.1+ FOR WC65Cx-SXB"
   .endif
   .ifdef APPLE
         .byte   LF,CR,LF
