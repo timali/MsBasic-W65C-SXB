@@ -15,3 +15,6 @@
 .ifdef SYM1
 .include "sym1_loadsave.s"
 .endif
+.ifdef W65C_SXB
+.include "w65c_sxb_loadsave.s"
+.endif

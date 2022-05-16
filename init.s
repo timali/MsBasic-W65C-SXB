@@ -239,6 +239,7 @@ L4098:
 .else
         ldy     #$00
 .endif
+; Memory size detection loop start.
 L40D7:
         inc     LINNUM
         bne     L40DD
@@ -289,6 +290,8 @@ L40EE:
         jmp     SYNERR
 .endif
 L40FA:
+; Memory size auto-detect complete.
+;LINNUM contains the first non-RAM memory location.
         lda     LINNUM
         ldy     LINNUM+1
         sta     MEMSIZ
@@ -508,6 +511,9 @@ QT_BASIC:
   .ifdef CBM2
         .byte   "### COMMODORE BASIC ###"
         .byte   CR,CR,0
+  .endif
+  .ifdef W65C_SXB
+        .byte   "MICROSOFT BASIC V1.1 FOR WC65Cx-SXB"
   .endif
   .ifdef APPLE
         .byte   LF,CR,LF
