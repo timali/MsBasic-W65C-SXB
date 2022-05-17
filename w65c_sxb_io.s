@@ -1,21 +1,21 @@
 .segment "CODE"
 
-IO              = $F000
+.if (USE_SIMULATOR)
 
-TERM_CLS        = IO + 0
-TERM_OUT        = IO + 1
-TERM_OUT_RAW    = IO + 2
-TERM_OUT_HEX    = IO + 3
-TERM_IN         = IO + 4
-
+; Output the character in A.
 MONCOUT:
 
-        STA TERM_OUT
+        STA SIM_TERM_OUT
         RTS
 
+; Read a character and return it in A.
 MONRDKEY:
 @LOOP:
-        LDA TERM_IN
+        LDA SIM_TERM_IN
         BEQ @LOOP
-        STA TERM_OUT
+        STA SIM_TERM_OUT
         RTS
+
+.else
+
+.endif
