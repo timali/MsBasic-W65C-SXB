@@ -12,5 +12,8 @@
         jmp     PR_WRITTEN_BY
 .endif
 .ifdef W65C_SXB
-        jmp     COLD_START
+  .if (!USE_SIMULATOR)
+        .byte   "WDC"           ; Auto-start signature for custom ROM monitor.
+  .endif
+        jmp     COLD_START      ; Jump to the cold-start routine.
 .endif
