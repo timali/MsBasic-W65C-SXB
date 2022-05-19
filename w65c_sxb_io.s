@@ -1,3 +1,9 @@
+; Define ZP variables.
+.zeropage
+.org    ZP_START_PORT
+ZP_TMP_1:       .res 1
+ZP_TMP_2:       .res 1
+
 .segment "CODE"
 
 .if (USE_SIMULATOR)
@@ -32,19 +38,21 @@ MON_IS_RX_DATA:
         jmp     (MON_PTR_IS_RX_DATA)
 
 ; Output the character in A. X must be preserved, but not Y.
+; Uses ZP_TMP_1, so it is not reentrant.
 MONCOUT:
-        phx
+        stx     ZP_TMP_1
         jsr     MON_TX_DATA
-        plx
+        ldx     ZP_TMP_1
         rts
 
 ; Read a character and return it in A. The read character should be echoed.
 ; X must be preserved, but not Y.
+; Uses ZP_TMP_1, so it is not reentrant.
 MONRDKEY:
-        phx
+        stx     ZP_TMP_1
         jsr     MON_RX_DATA
         jsr     MON_TX_DATA     ; Echo the character.
-        plx
+        ldx     ZP_TMP_1
         rts
 
 .endif

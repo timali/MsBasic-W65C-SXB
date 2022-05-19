@@ -6,7 +6,7 @@
 
 ; 0: Run BASIC from system RAM.
 ; 1: Run BASIC from ROM. Currently requires the custom-ROM monitor.
-USE_ROM                     = 1
+USE_ROM                     = 0
 
 ; 0: Use the Kowalski 6502 simulator instead of the real SXB hardware.
 ; 1: Use the 65X-SXB hardware.
@@ -14,7 +14,7 @@ USE_SIMULATOR               = 0
 
 ; 0: Use the standard factory ROM monitor.
 ; 1: Use a custom-built ROM monitor.
-USE_CUST_ROM_MONITOR        = 1
+USE_CUST_ROM_MONITOR        = 0
 
 ; ********************** PRIVATE SETTINGS ***************************
 ; Use the latest version of BASIC available, which includes several
@@ -36,6 +36,10 @@ ZP_START1                   = $00 ; Occupies $00-$9
 ZP_START2                   = $15 ; Occupies $15-$1A + INPUTBUFFER-LENGTH
 ZP_START3                   = $0A ; Uccupies $0A-14
 ZP_START4                   = $63 ; Occupies $63-$BF + CHRGET and RNDSEED
+
+; Zero-page allocations for the custom port. These start after ZP_START4, which
+; includes $1D bytes for copying CHRGET and RNDSEED.
+ZP_START_PORT               = $DD
 
 ; extra/override ZP variables
 USR                         := GORESTART    ; xxx Same as CBM, but is this right?
