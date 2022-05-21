@@ -1,5 +1,11 @@
 .segment "CODE"
 
+.ifndef MAX_ASCII_VAL
+    ; Allow ports to override this. Any ASCII value higher than this
+    ; will be ignored when reading from the input device.
+    MAX_ASCII_VAL = $7C
+.endif
+
 .ifndef CONFIG_NO_INPUTBUFFER_ZP
 L2420:
   .ifdef OSI
@@ -74,7 +80,7 @@ INLINAIM:
         cmp     #$7F
         beq     L2420
         .endif
-        cmp     #$7D
+        cmp     #(MAX_ASCII_VAL+1)
       .endif
         bcs     INLIN2
         cmp     #$40 ; @

@@ -28,6 +28,9 @@ CONFIG_PRINT_CR             := 1 ; print CR when line end reached
 CONFIG_SAFE_NAMENOTFOUND    := 1
 CONFIG_SCRTCH_ORDER         := 2
 
+; Allow ASCII characters up through and including '~' to be used.
+MAX_ASCII_VAL               = $7E;
+
 ; Currently not supported.
 ; CONFIG_FILE               := 1; support PRINT#, INPUT#, GET#, CMD
 
