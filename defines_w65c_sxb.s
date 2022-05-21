@@ -35,17 +35,22 @@ MAX_ASCII_VAL               = $7E;
 ; CONFIG_FILE               := 1; support PRINT#, INPUT#, GET#, CMD
 
 ; Zero-page allocations.
-ZP_START1                   = $00 ; Occupies $00-$9
+ZP_START1                   = $00 ; Occupies $00-$09
 ZP_START2                   = $15 ; Occupies $15-$1A + INPUTBUFFER-LENGTH
 ZP_START3                   = $0A ; Uccupies $0A-14
 ZP_START4                   = $63 ; Occupies $63-$BF + CHRGET and RNDSEED
 
-; Zero-page allocations for the custom port. These start after ZP_START4, which
-; includes $1D bytes for copying CHRGET and RNDSEED.
-ZP_START_PORT               = $DD
+; The next free ZP address is $DD. Use three bytes starting here for the USR
+; vector. Upon cold start, $DD will contain "JMP IQERR". So by default, if
+; the program calls USR(), it will return an Illegal Quantity error. To use
+; the USR function, the program may POKE the address of their machine language
+; routine to addresses $DE and $DF (LSB first).
+USR                         := $DD ; Three bytes are used.
 
-; extra/override ZP variables
-USR                         := GORESTART    ; xxx Same as CBM, but is this right?
+; Zero-page allocations for the custom port. These start after ZP_START4,
+; which includes $1D bytes for copying CHRGET and RNDSEED, and after the
+; the USR jmp vector, which uses three bytes.
+ZP_START_PORT               = $E0
 
 ; constants
 STACK_TOP                   := $FC

@@ -63,6 +63,8 @@ COLD_START:
         sty     GOGIVEAYF+1
     .endif
   .endif
+        ; Load A with the opcode for JMP, which is used to construct
+        ; jump vectors in the zero-page area.
         lda     #$4C
   .ifdef CONFIG_CBM_ALL
         sta     JMPADRS
