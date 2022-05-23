@@ -16,6 +16,15 @@
 .include "sym1_loadsave.s"
 .endif
 .ifdef W65C_SXB
-.include "w65c_sxb_loadsave.s"
-.include "w65c_sxb_io.s"
+    .include "w65c_sxb_loadsave.s"
+    .include "w65c_sxb_io.s"
+    .if (USE_SIMULATOR)
+        .include "w65c_sxb_io_sim.s"
+    .else
+        .if (USE_USB_FOR_IO)
+            .include "w65c_sxb_io_usb.s"
+        .else
+            .include "w65c_sxb_io_uart.s"
+        .endif
+    .endif
 .endif

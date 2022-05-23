@@ -45,6 +45,13 @@ COLD_START:
         ldx     #$FE
   .endif
         txs
+
+  ; Now that the stack is set up, call our platform init code.
+  ; The init code is not required to preserve any registers.
+  .ifdef W65C_SXB
+        jsr     PLATFORM_INIT
+  .endif
+
   .ifndef CONFIG_CBM_ALL
         lda     #<COLD_START
         ldy     #>COLD_START

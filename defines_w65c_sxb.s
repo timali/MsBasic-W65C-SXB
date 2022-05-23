@@ -12,9 +12,32 @@ USE_ROM                     = 0
 ; 1: Use the 65X-SXB hardware.
 USE_SIMULATOR               = 0
 
+; 0: Use the UART (ACIA) for IO.
+; 1: Use the USB debugging interface (virtual COM port) for IO.
+USE_USB_FOR_IO              = 0
+
 ; 0: Use the standard factory ROM monitor.
 ; 1: Use a custom-built ROM monitor.
 USE_CUST_ROM_MONITOR        = 0
+
+; When using the UART, specify the baud rate.
+; 0:    115200
+; 1:    50
+; 2:    75
+; 3:    109.92
+; 4:    134.58
+; 5:    150
+; 6:    300
+; 7:    600
+; 8:    1200
+; 9:    1800
+; A:    2400
+; B:    3600
+; C:    4800
+; D:    7200
+; E:    9600
+; F:    19200
+UART_BAUD                   = $00
 
 ; ********************** PRIVATE SETTINGS ***************************
 ; Use the latest version of BASIC available, which includes several
@@ -119,11 +142,27 @@ L1873                       := $1873
     MON_PTR_RX_DATA         := MON_PTR_TBL + $06
     MON_PTR_TX_DATA         := MON_PTR_TBL + $08
 
+    ACIA_BASE               := $7F80
+    ACIA_DATA               := ACIA_BASE + $00
+    ACIA_STATUS_RESET       := ACIA_BASE + $01
+    ACIA_CMD                := ACIA_BASE + $02
+    ACIA_CTRL               := ACIA_BASE + $03
+
 .endif
+
+; Save the current segment so we can restore it when we're done.
+.pushseg
+
+; Define ZP variables used in our port.
+.zeropage
+.org    ZP_START_PORT
+    ZP_TMP_1:       .res 1
+    ZP_TMP_2:       .res 1
 
 ; Set up the RST vector to point to COLD_START. This is useful when
 ; using the WDC debugger, so the debugger knows the entry point.
-.pushseg
 .segment "RSTVEC"
     .addr   COLD_START
+
+; Restore the previous segment in use.
 .popseg
