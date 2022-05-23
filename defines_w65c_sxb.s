@@ -120,3 +120,10 @@ L1873                       := $1873
     MON_PTR_TX_DATA         := MON_PTR_TBL + $08
 
 .endif
+
+; Set up the RST vector to point to COLD_START. This is useful when
+; using the WDC debugger, so the debugger knows the entry point.
+.pushseg
+.segment "RSTVEC"
+    .addr   COLD_START
+.popseg
