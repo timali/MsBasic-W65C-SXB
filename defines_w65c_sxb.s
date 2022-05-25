@@ -39,6 +39,11 @@ USE_CUST_ROM_MONITOR        = 0
 ; F:    19200
 UART_BAUD                   = $00
 
+; When using the UART for IO, this is the size of the RX buffer. This
+; must be a power of two. The actual usable space in the buffer is one
+; byte less than specified.
+UART_RX_BUFF_SZ             = $10
+
 ; ********************** PRIVATE SETTINGS ***************************
 ; Use the latest version of BASIC available, which includes several
 ; bugfixes.
@@ -132,8 +137,10 @@ L1873                       := $1873
 
     .if (USE_CUST_ROM_MONITOR)
         MON_PTR_TBL         := $F080
+        IRQ_SHADOW_VEC      := $7EFE
     .else
         MON_PTR_TBL         := $8080
+        IRQ_SHADOW_VEC      := $7EFE
     .endif
 
     MON_PTR_SIG             := MON_PTR_TBL + $00
@@ -148,6 +155,8 @@ L1873                       := $1873
     ACIA_CMD                := ACIA_BASE + $02
     ACIA_CTRL               := ACIA_BASE + $03
 
+    UART_RX_BUFF_MASK       = UART_RX_BUFF_SZ - 1
+
 .endif
 
 ; Save the current segment so we can restore it when we're done.
@@ -156,8 +165,23 @@ L1873                       := $1873
 ; Define ZP variables used in our port.
 .zeropage
 .org    ZP_START_PORT
+
+    ; Temporary variables.
     ZP_TMP_1:       .res 1
     ZP_TMP_2:       .res 1
+
+    ; Define variables used with the UART.
+    .if (!USE_SIMULATOR) && (!USE_USB_FOR_IO)
+        ; The UART RX buffer.
+        UART_RX_BUFF:           .res    UART_RX_BUFF_SZ
+
+        ; UART RX buffer write and read indices.
+        UART_RX_WR_IDX:         .res    1
+        UART_RX_RD_IDX:         .res    1
+
+        ; The number of UART RX overflows.
+        UART_RX_OVERFLOWS:      .res    1
+    .endif
 
 ; Set up the RST vector to point to COLD_START. This is useful when
 ; using the WDC debugger, so the debugger knows the entry point.

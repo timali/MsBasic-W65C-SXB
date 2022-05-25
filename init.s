@@ -20,6 +20,22 @@ PR_WRITTEN_BY:
   .endif
 .endif
 COLD_START:
+
+.ifdef W65C_SXB
+        ; Disable interrupts and switch to '02 emulation mode. This isn't
+        ; strictly necessary when running on the real device, since this
+        ; code will be called from a reset, in which case we're already in
+        ; '02-emulation mode with interrupts disabled. But, when running
+        ; using the WDC debugger, it has a tendency to start the application
+        ; in 816-native mode, which causes a problem since we hook the
+        ; emulation-mode IRQ vector.
+        sei
+
+        ; Set carry and execute XCE. On the 65c02, this is a NO-OP.
+        sec
+        .byte $FB ; XCE
+.endif
+
 .ifdef SYM1
         jsr     ACCESS
 .endif

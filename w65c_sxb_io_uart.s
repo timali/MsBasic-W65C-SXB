@@ -29,19 +29,103 @@
 ; Called to allow the platform port to initialize itself.
 ; May use any registers without preserving their contents.
 PLATFORM_INIT:
+
         ; Perform a soft-reset of the ACIA.
         lda     #$00
         sta     ACIA_STATUS_RESET
+
+        ; Initialize the UART variables.
+        sta     UART_RX_WR_IDX
+        sta     UART_RX_RD_IDX
+        sta     UART_RX_OVERFLOWS
 
         ; Configure for 19200 baud, 8 stop bits, 1 data bit.
         lda     #$10 + UART_BAUD
         sta     ACIA_CTRL
 
-        ; No partiy, RTS and DTR low (ready), disable interrupts.
-        lda     #$0B
+        ; No parity, RTS and DTR low (ready), enable interrupts.
+        lda     #$09
         sta     ACIA_CMD
 
+        ; Install our IRQ handler by overwriting the monitor's IRQ-02 shadow vector.
+        lda     #<IRQ_HANDLER
+        sta     IRQ_SHADOW_VEC
+        lda     #>IRQ_HANDLER
+        sta     IRQ_SHADOW_VEC+1
+
+        ; Enable interrupts.
+        cli
+
         rts
+
+; Interrupt handler for 6502-emulation mode (which is the only mode we execute in).
+; This is called from the ROM monitor only upon an actual IRQ (BRKs break into the
+; ROM monitor instead). The ROM monitor does not save any context other than what
+; the ISR automatically saves, so we're responsible for saving/restoring context.
+;
+; This ISR is called for any interrupt generated on the system. Currently, this is
+; only UART interrupts. The UART ISR will be called in response to one of these:
+;
+;       1) A byte has been received.
+;       2) The DSR line has changed state.
+;       3) The DCD line has changed state.
+;
+; Unfortunately, there is no way to disable the DSR and DCD interrupts, so these
+; lines must not be left floating, otherwise spurious interrupts can (and will)
+; occur.
+IRQ_HANDLER:
+        ; Save all the registers we use.
+        pha
+        phx
+
+        ; Bit 7 of ACIA_STATUS_RESET indicates whether the UART has generated the
+        ; interrupt. If there are multiple devices which could generate an interrupt,
+        ; then we should check this bit to see if it was the UART or something else.
+        ; Currently, only the UART generates interrupts, so there is no need to check
+        ; it.
+
+        ; Check to see if data has been received first, since this is the most time-
+        ; sensitive operation.
+        lda     ACIA_STATUS_RESET
+        bit     $08
+        beq     @No_Rx_Data
+
+        ; Read the received data. This clears the bit in the status register, which
+        ; disables interrupt generation for this condition.
+        lda     ACIA_DATA
+
+        ; Store the character at the next free write position in the RX buffer.
+        ldx     UART_RX_WR_IDX
+        sta     UART_RX_BUFF, x
+
+        ; Compute the next write position in the RX buffer.
+        inx
+        txa
+        and     #UART_RX_BUFF_MASK
+
+        ; See if the RX buffer is full (if write index == read index).
+        cmp     UART_RX_RD_IDX
+        bne     @Update_Write_Ptr
+
+        ; The RX buffer is full, so we've lost the incoming data.
+        inc     UART_RX_OVERFLOWS
+        bra     @No_Rx_Data
+
+@Update_Write_Ptr:
+
+        ; The buffer is not full, so update the write index, which effectively
+        ; adds the received data to the RX buffer.
+        sta     UART_RX_WR_IDX
+
+@No_Rx_Data:
+        ; At this point, DSR and/or DCD may have also changed state, but we don't
+        ; care about them. They will not generate another IRQ until they change states
+        ; again.
+
+        ; Restore all the registers we use and return from the ISR.
+        plx
+        pla
+        rti
 
 ; Delays at least 5X+1280(Y-1) cycles. If X/Y is 0, then it behaves like X/Y is 256.
 ; The W65Cx SXB boards have an 8 MHz clock, so the delay is 160 us per Y count.
@@ -57,7 +141,7 @@ IO_TX_DATA:
         ; Write the character to the UART.
         sta     ACIA_DATA
 
-        ; Wait long endough to ensure the character is output. The ACIA has a
+        ; Wait long enough to ensure the character is output. The ACIA has a
         ; bug which prevents us from polling the UART to find this out.
         ldy     #UART_DELAY_Y
         ldx     #UART_DELAY_X
@@ -67,18 +151,31 @@ IO_TX_DATA:
 
 ; Waits for a character, and returns it in A.
 IO_RX_DATA:
-        ; Wait for a character to be available.
-        lda     #$08
-        bit     ACIA_STATUS_RESET
-        beq     IO_RX_DATA
+        ; Only the write pointer is modified within the ISR, so we know the read
+        ; pointer will not change. Wait for data to be available by waiting until
+        ; the write pointer is no longer equal to the read pointer.
+        ldx     UART_RX_RD_IDX
+@loop:
+        cpx     UART_RX_WR_IDX
+        beq     @loop
 
-        ; Read the character.
-        lda     ACIA_DATA
+        ; Read the data from the buffer. Must be done before updating the index.
+        ldy     UART_RX_BUFF, x
 
+        ; Compute and store the next read index.
+        inx
+        txa
+        and     #UART_RX_BUFF_MASK
+        sta     UART_RX_RD_IDX
+
+        ; Return the data read in A.
+        tya
         rts
 
 ; Returns 0 in A if no input data is available.
 IO_IS_RX_DATA:
-        lda     #$08
-        bit     ACIA_STATUS_RESET
+        ; The RX buffer is empty if the read pointer = write pointer.
+        lda     UART_RX_WR_IDX
+        cmp     UART_RX_RD_IDX
+
         rts
