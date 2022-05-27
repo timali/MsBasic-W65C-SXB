@@ -37,7 +37,7 @@ PLATFORM_INIT:
         ; Initialize the UART variables.
         sta     UART_RX_WR_IDX
         sta     UART_RX_RD_IDX
-        sta     UART_RX_OVERFLOWS
+        sta     UART_STATUS
 
         ; Configure for 19200 baud, 8 stop bits, 1 data bit.
         lda     #$10 + UART_BAUD
@@ -52,6 +52,10 @@ PLATFORM_INIT:
         sta     IRQ_SHADOW_VEC
         lda     #>IRQ_HANDLER
         sta     IRQ_SHADOW_VEC+1
+
+        ; Perform an initial read of the status register to clear out any stale
+        ; flags, like the receiver overflow flag.
+        lda     ACIA_STATUS_RESET
 
         ; Enable interrupts.
         cli
@@ -84,11 +88,21 @@ IRQ_HANDLER:
         ; Currently, only the UART generates interrupts, so there is no need to check
         ; it.
 
-        ; Check to see if data has been received first, since this is the most time-
-        ; sensitive operation.
+        ; Read the status register, which tells us if data is recieved and the status.
         lda     ACIA_STATUS_RESET
-        bit     $08
+
+        ; Mask out everything but the framing and overrun bits, and set them in the
+        ; UART_STATUS variable if they are set.
+        tax
+        and     #$06
+        tsb     UART_STATUS
+        txa
+
+        ; Check to see if data has been received.
+        bit     #$08
         beq     @No_Rx_Data
+
+@No_Receiver_Overrun:
 
         ; Read the received data. This clears the bit in the status register, which
         ; disables interrupt generation for this condition.
@@ -108,7 +122,8 @@ IRQ_HANDLER:
         bne     @Update_Write_Ptr
 
         ; The RX buffer is full, so we've lost the incoming data.
-        inc     UART_RX_OVERFLOWS
+        lda     #$01
+        tsb     UART_STATUS
         bra     @No_Rx_Data
 
 @Update_Write_Ptr:

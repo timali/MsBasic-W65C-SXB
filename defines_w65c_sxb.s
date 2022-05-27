@@ -179,8 +179,15 @@ L1873                       := $1873
         UART_RX_WR_IDX:         .res    1
         UART_RX_RD_IDX:         .res    1
 
-        ; The number of UART RX overflows.
-        UART_RX_OVERFLOWS:      .res    1
+        ; The status of the UART.
+        ;   Bit 0: Whether the RX buffer has overflown. This happens when the
+        ;          application does not read data from the RX buffer before it
+        ;          becomes full.
+        ;   Bit 1: Whether an RX framing error has occurred.
+        ;   Bit 2: Whether the receiver register has been overrun. This happens
+        ;          when the ISR does not read the data from the UART receiver
+        ;          register before another byte was received.
+        UART_STATUS:            .res    1
     .endif
 
 ; Set up the RST vector to point to COLD_START. This is useful when
