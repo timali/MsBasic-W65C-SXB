@@ -209,11 +209,6 @@ IO_RX_DATA:
 
         ; The buffer has transitioned from non-empty to empty, so assert RTS to
         ; allow more data to be received.
-        ;ldx     #$09            ; Assert RTS
-        ;stx     ACIA_CMD
-
-        ; The buffer has transitioned from non-empty to empty, so assert RTS to
-        ; allow more data to be received.
         ldx     #$0C
         stx     USR_VIA_PCR
 
