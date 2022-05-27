@@ -63,7 +63,7 @@ UART_RX_BUFF_SZ             = $08
 ; allows reliable communication even at 115200 baud.
 ;
 ; You can check the status of the UART by examing the UART staus
-; variable in BASIC, for example, PEEK(244). If the result is 0,
+; variable in BASIC, for example, PEEK(228). If the result is 0,
 ; then there have been no framing errors, receiver overruns, or RX
 ; buffer overflows, so all data has been received properly
 UART_FLOW_CONTROL_HW        := 1
@@ -204,8 +204,6 @@ L1873                       := $1873
 
     ; Define variables used with the UART.
     .if (!USE_SIMULATOR) && (!USE_USB_FOR_IO)
-        ; The UART RX buffer.
-        UART_RX_BUFF:           .res    UART_RX_BUFF_SZ
 
         ; UART RX buffer write and read indices.
         UART_RX_WR_IDX:         .res    1
@@ -220,6 +218,10 @@ L1873                       := $1873
         ;          when the ISR does not read the data from the UART receiver
         ;          register before another byte was received.
         UART_STATUS:            .res    1
+
+        ; The UART RX buffer.
+        UART_RX_BUFF:           .res    UART_RX_BUFF_SZ
+
     .endif
 
 ; Set up the RST vector to point to COLD_START. This is useful when
