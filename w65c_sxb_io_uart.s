@@ -47,6 +47,13 @@ PLATFORM_INIT:
         lda     #$09
         sta     ACIA_CMD
 
+.if (UART_FLOW_CONTROL_HW)
+        ; Lower our RTS output (CA2), which asserts the signal, allowing data to
+        ; be sent from the remote device to BASIC.
+        lda     #$0C
+        sta     USR_VIA_PCR
+.endif
+
         ; Install our IRQ handler by overwriting the monitor's IRQ-02 shadow vector.
         lda     #<IRQ_HANDLER
         sta     IRQ_SHADOW_VEC
@@ -111,6 +118,19 @@ IRQ_HANDLER:
         ; Store the character at the next free write position in the RX buffer.
         ldx     UART_RX_WR_IDX
         sta     UART_RX_BUFF, x
+
+.if (UART_FLOW_CONTROL_HW)
+        ; See if the RX buffer was previously empty.
+        cpx     UART_RX_RD_IDX
+        bne     @Move_To_Next_Index
+
+        ; At this point, the RX buffer transitioned from empty to non-empty.
+        ; De-assert RTS (raise CA2) to prevent any more data being added.
+        lda     #$0E
+        sta     USR_VIA_PCR
+
+@Move_To_Next_Index:
+.endif
 
         ; Compute the next write position in the RX buffer.
         inx
@@ -177,10 +197,30 @@ IO_RX_DATA:
         ; Read the data from the buffer. Must be done before updating the index.
         ldy     UART_RX_BUFF, x
 
-        ; Compute and store the next read index.
+        ; Compute the next read index.
         inx
         txa
         and     #UART_RX_BUFF_MASK
+
+.if (UART_FLOW_CONTROL_HW)
+        ; See if the RX buffer has become empty (read pointer = write pointer).
+        cmp     UART_RX_WR_IDX
+        bne     @Store_Read_Index
+
+        ; The buffer has transitioned from non-empty to empty, so assert RTS to
+        ; allow more data to be received.
+        ;ldx     #$09            ; Assert RTS
+        ;stx     ACIA_CMD
+
+        ; The buffer has transitioned from non-empty to empty, so assert RTS to
+        ; allow more data to be received.
+        ldx     #$0C
+        stx     USR_VIA_PCR
+
+@Store_Read_Index:
+.endif
+
+        ; Store the next read index. This is the point where the ISR is notified.
         sta     UART_RX_RD_IDX
 
         ; Return the data read in A.

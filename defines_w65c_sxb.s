@@ -42,7 +42,31 @@ UART_BAUD                   = $00
 ; When using the UART for IO, this is the size of the RX buffer. This
 ; must be a power of two. The actual usable space in the buffer is one
 ; byte less than specified.
-UART_RX_BUFF_SZ             = $10
+UART_RX_BUFF_SZ             = $08
+
+; When using the UART for IO, this controls whether hardware (RTS/CTS)
+; flow control is enabled. Due to bugs on the ACIA, neither the RTS or
+; CTS pins on the ACIA can be used, so we use the following workaround:
+;
+; 1) The CA2 output on the user VIA (J3, pin 4) is used for the RTS
+;    output. This allows BASIC to control the flow of data coming into
+;    it from the remote device, which is great for allowing BASIC
+;    programs to be entered via a file transfer from a PC via terminal
+;    emulator.
+;
+; 2) Flow control from BASIC to the remote device is not supported.
+;    This could be accomplished using an input on the user VIA, the
+;    PIA, or even the DSR or DCD inputs on the ACIA. But, flow control
+;    in this direction is less important, so it is not supported.
+;
+; RTS/CTS flow control must be enabled on the remote device. This
+; allows reliable communication even at 115200 baud.
+;
+; You can check the status of the UART by examing the UART staus
+; variable in BASIC, for example, PEEK(244). If the result is 0,
+; then there have been no framing errors, receiver overruns, or RX
+; buffer overflows, so all data has been received properly
+UART_FLOW_CONTROL_HW        := 1
 
 ; ********************** PRIVATE SETTINGS ***************************
 ; Use the latest version of BASIC available, which includes several
@@ -59,8 +83,9 @@ CONFIG_SCRTCH_ORDER         := 2
 ; Allow ASCII characters up through and including '~' to be used.
 MAX_ASCII_VAL               = $7E;
 
-; Currently not supported.
-; CONFIG_FILE               := 1; support PRINT#, INPUT#, GET#, CMD
+; Currently not supported. Eventually, this will allow using OPEN, CLOSE,
+; PRINT#, INPUT#, and GET# commands, to support multiple IO devices.
+; CONFIG_FILE               := 1; support 
 
 ; Zero-page allocations.
 ZP_START1                   = $00 ; Occupies $00-$09
@@ -143,18 +168,25 @@ L1873                       := $1873
         IRQ_SHADOW_VEC      := $7EFE
     .endif
 
+    ; Subroutines in the ROM monitor.
     MON_PTR_SIG             := MON_PTR_TBL + $00
     MON_PTR_INIT            := MON_PTR_TBL + $02
     MON_PTR_IS_RX_DATA      := MON_PTR_TBL + $04
     MON_PTR_RX_DATA         := MON_PTR_TBL + $06
     MON_PTR_TX_DATA         := MON_PTR_TBL + $08
 
+    ; The ACIA registers.
     ACIA_BASE               := $7F80
     ACIA_DATA               := ACIA_BASE + $00
     ACIA_STATUS_RESET       := ACIA_BASE + $01
     ACIA_CMD                := ACIA_BASE + $02
     ACIA_CTRL               := ACIA_BASE + $03
 
+    ; The user VIA registers (only the ones we use).
+    USR_VIA_BASE            := $7FC0
+    USR_VIA_PCR             := USR_VIA_BASE + $0C
+
+    ; Compute a mask based on the UART RX buffer size.
     UART_RX_BUFF_MASK       = UART_RX_BUFF_SZ - 1
 
 .endif
