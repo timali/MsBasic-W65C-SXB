@@ -17,7 +17,7 @@ USE_SIMULATOR               = 0
 USE_USB_FOR_IO              = 0
 
 ; 0: Use the standard factory ROM monitor.
-; 1: Use a custom-built ROM monitor.
+; 1: Use a custom-built ROM monitor (https://github.com/timali/W65C816SXB-Custom-ROM).
 USE_CUST_ROM_MONITOR        = 0
 
 ; When using the UART, specify the baud rate.
@@ -37,12 +37,12 @@ USE_CUST_ROM_MONITOR        = 0
 ; D:    7200
 ; E:    9600
 ; F:    19200
-UART_BAUD                   = $00
+UART_BAUD                   = $0F
 
 ; When using the UART for IO, this is the size of the RX buffer. This
 ; must be a power of two. The actual usable space in the buffer is one
 ; byte less than specified.
-UART_RX_BUFF_SZ             = $08
+UART_RX_BUFF_SZ             = $10
 
 ; When using the UART for IO, this controls whether hardware (RTS/CTS)
 ; flow control is enabled. Due to bugs on the ACIA, neither the RTS or
@@ -62,7 +62,7 @@ UART_RX_BUFF_SZ             = $08
 ; RTS/CTS flow control must be enabled on the remote device. This
 ; allows reliable communication even at 115200 baud.
 ;
-; You can check the status of the UART by examing the UART staus
+; You can check the status of the UART by examining the UART status
 ; variable in BASIC, for example, PEEK(228). If the result is 0,
 ; then there have been no framing errors, receiver overruns, or RX
 ; buffer overflows, so all data has been received properly
@@ -222,6 +222,11 @@ L1873                       := $1873
         ; The UART RX buffer.
         UART_RX_BUFF:           .res    UART_RX_BUFF_SZ
 
+    .endif
+
+    ; Check to ensure all our zero-page variables fit.
+    .if (* > $100)
+        .error "Out of space in zero page."
     .endif
 
 ; Set up the RST vector to point to COLD_START. This is useful when

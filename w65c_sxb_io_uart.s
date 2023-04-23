@@ -39,7 +39,7 @@ PLATFORM_INIT:
         sta     UART_RX_RD_IDX
         sta     UART_STATUS
 
-        ; Configure for 19200 baud, 8 stop bits, 1 data bit.
+        ; Configure for desired baud, 8 stop bits, 1 data bit.
         lda     #$10 + UART_BAUD
         sta     ACIA_CTRL
 
@@ -120,12 +120,10 @@ IRQ_HANDLER:
         sta     UART_RX_BUFF, x
 
 .if (UART_FLOW_CONTROL_HW)
-        ; See if the RX buffer was previously empty.
-        cpx     UART_RX_RD_IDX
-        bne     @Move_To_Next_Index
-
-        ; At this point, the RX buffer transitioned from empty to non-empty.
-        ; De-assert RTS (raise CA2) to prevent any more data being added.
+        ; There is at least one byte in the RX buffer, so de-assert RTS (raise CA2)
+        ; to prevent any more data being added. We technically only need to do this
+        ; when the buffer transitions from empty to non-empty, but it does not hurt,
+        ; and it is simpler, to do it every time we receive a byte.
         lda     #$0E
         sta     USR_VIA_PCR
 
@@ -207,8 +205,8 @@ IO_RX_DATA:
         cmp     UART_RX_WR_IDX
         bne     @Store_Read_Index
 
-        ; The buffer has transitioned from non-empty to empty, so assert RTS to
-        ; allow more data to be received.
+        ; The buffer has become empty, so assert RTS to allow more data to be
+        ; received.
         ldx     #$0C
         stx     USR_VIA_PCR
 

@@ -558,7 +558,8 @@ QT_BASIC:
         .byte   CR,CR,0
   .endif
   .ifdef W65C_SXB
-        .byte   "MICROSOFT BASIC V1.1+ FOR WC65Cx-SXB"
+        .byte   "MICROSOFT BASIC V1.1+ FOR WC65Cx-SXB",CR,LF
+        .byte   "PORT BY TIMOTHY ALICIE"
   .endif
   .ifdef APPLE
         .byte   LF,CR,LF
