@@ -81,7 +81,7 @@ SAVE:
         lda     TXTTAB+1
         sta     ZP_TMP_2
 
-@FlashCopyLoop:
+@Flash_Copy_Loop:
 
         ; Load the next byte to copy from the source pointer.
         lda     (ZP_TMP_1)
@@ -91,20 +91,20 @@ SAVE:
 
         ; Move to the next source address.
         inc     ZP_TMP_1
-        bne     @SourcePtrUpdated
+        bne     @Source_Ptr_Updated
         inc     ZP_TMP_2
 
-@SourcePtrUpdated:
+@Source_Ptr_Updated:
 
         ; See if we're done copying. Check the LSB.
         lda     ZP_TMP_1
         cmp     VARTAB
-        bne     @FlashCopyLoop
+        bne     @Flash_Copy_Loop
 
         ; The LSB matches, so now check the MSB.
         lda     ZP_TMP_2
         cmp     VARTAB+1
-        bne     @FlashCopyLoop
+        bne     @Flash_Copy_Loop
 
         ; Print the message indicating the program was saved. This is a tail
         ; call, so the RTS is performed at the end of STROUT.
@@ -144,10 +144,10 @@ ERASE_FLASH_SECTOR:
         ; Initialiate the erase by writing to any byte within the sector.
         sta     (ZP_TMP_W)
 
-@CheckForEraseComplete:
+@Check_For_Erase_Complete:
         lda     (ZP_TMP_W)
         cmp     #$FF
-        bne     @CheckForEraseComplete
+        bne     @Check_For_Erase_Complete
 
         .endif
 
@@ -177,9 +177,9 @@ WRITE_FLASH_BYTE:
         sta     (ZP_TMP_W)
 
         ; Wait until the write has completed. It should take at most 20 us.
-@CheckForWriteComplete:
+@Check_For_Write_Complete:
         cmp     (ZP_TMP_W)
-        bne     @CheckForWriteComplete
+        bne     @Check_For_Write_Complete
 
         .endif
 
@@ -190,9 +190,9 @@ WRITE_FLASH_BYTE:
 
         ; Move to the next address.
         inc     ZP_TMP_W
-        bne     @SkipMsb
+        bne     @Skip_Msb
         inc     ZP_TMP_W+1
-@SkipMsb:
+@Skip_Msb:
 
         rts
 
@@ -200,7 +200,78 @@ WRITE_FLASH_BYTE:
 ; area pointed to by TXTTAB, and then VARTAB must be set to point immediately
 ; after the program.
 LOAD:
-        ; Print the message indicated the program was loaded.
+
+        ; Check to see if there is a program saved or not. Load the size MSB.
+        lda     SAVE_FLASH_START+1
+
+        ; If the MSB is $FF, assume the flash is empty.
+        cmp     #$FF
+        bne     @Continue_Loading
+
+        ; Print the message indicating there is no program saved. Do a tail call
+        ; so that this will terminate this function and return once complete.
+        lda     #<QT_NO_PROGRAM
+        ldy     #>QT_NO_PROGRAM
+        jmp     STROUT
+
+@Continue_Loading:
+
+        ; Add the LSB of the program size and save it into VARTAB LSB.
+        clc
+        lda     SAVE_FLASH_START
+        adc     TXTTAB
+        sta     VARTAB
+
+        ; Now add and save the MSB. VARTAB now points past the program data.
+        lda     SAVE_FLASH_START+1
+        adc     TXTTAB+1
+        sta     VARTAB+1
+
+        ; Use ZP_TMP_1 and ZP_TMP_2 as the source pointer in FLASH.
+        lda     #<(SAVE_FLASH_START+2)
+        sta     ZP_TMP_1
+        lda     #>(SAVE_FLASH_START+2)
+        sta     ZP_TMP_2
+
+        ; Use ZP_TMP_W as the destination pointer in program RAM.
+        lda     TXTTAB
+        sta     ZP_TMP_W
+        lda     TXTTAB+1
+        sta     ZP_TMP_W+1
+
+@Copy_Loop:
+
+        ; Load the next byte to copy from the source pointer.
+        lda     (ZP_TMP_1)
+
+        ; Copy the byte to the destination.
+        sta     (ZP_TMP_W)
+
+        ; Move to the next source address.
+        inc     ZP_TMP_1
+        bne     @Source_Ptr_Updated
+        inc     ZP_TMP_2
+
+@Source_Ptr_Updated:
+
+        ; Move to the next destination address.
+        inc     ZP_TMP_W
+        bne     @Dest_Ptr_Updated
+        inc     ZP_TMP_W+1
+
+@Dest_Ptr_Updated:
+
+        ; See if we're done copying. Check the LSB.
+        lda     ZP_TMP_W
+        cmp     VARTAB
+        bne     @Copy_Loop
+
+        ; The LSB matches, so now check the MSB.
+        lda     ZP_TMP_W+1
+        cmp     VARTAB+1
+        bne     @Copy_Loop
+
+        ; Print the message indicating the program was loaded.
         lda     #<QT_LOADED
         ldy     #>QT_LOADED
         jsr     STROUT
@@ -221,6 +292,10 @@ QT_SAVED:
 
 QT_TOO_BIG:
         .byte   "TOO BIG"
+        .byte   $0D,$0A,$00
+
+QT_NO_PROGRAM:
+        .byte   "NO SAVED PROGRAM"
         .byte   $0D,$0A,$00
 
 QT_LOADED:
