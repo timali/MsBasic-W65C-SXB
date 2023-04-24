@@ -26,6 +26,16 @@
         .error "You must calculate the UART delays for this baud rate."
 .endif
 
+; Platform-specific macro to (re)enable interrupts.
+.macro PLATFORM_CLI
+                cli
+.endmacro
+
+; Platform-specific macro to disable interrupts.
+.macro PLATFORM_SEI
+                sei
+.endmacro
+
 ; Called to allow the platform port to initialize itself.
 ; May use any registers without preserving their contents.
 PLATFORM_INIT:

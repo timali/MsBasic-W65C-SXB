@@ -137,9 +137,24 @@ WIDTH2                      := 56
 ; The start of reserved memory (prevent overwriting monitor work-RAM).
 RAMEND                      := $7E00
 
-; magic memory locations
-L1800                       := $1800
-L1873                       := $1873
+; The region in FLASH memory where  BASIC programs are saved/loaded. This
+; range was chosen so as to be free for all configurations. Note that even
+; when the stock factory ROM monitor is used, the BASIC program will be
+; saved/loaded to a region in FLASH which is not used by the monitor.
+;
+;   • BASIC in RAM with stock ROM monitor:
+;       ○ FLASH free range: $9000-$EFFF (24 KB).
+;   • BASIC in RAM with custom ROM monitor:
+;       ○ FLASH free range: $8000-$EFFF (28 KB).
+;   • BASIC in ROM with stock ROM monitor:
+;       ○ Unsupported because BASIC and the ROM monitor collide. 
+;   • BASIC in ROM with custom ROM monitor:
+;       ○ FLASH free rnage: $B000-$EFFF (16 KB).
+SAVE_FLASH_START            := $B000
+SAVE_FLASH_END              := $F000
+
+; The maximum size of the BASIC SAVE area.
+SAVE_FLASH_SIZE             := SAVE_FLASH_END - SAVE_FLASH_START
 
 ; This is not a supported combination because BASIC in ROM would
 ; occupy the same space as the factory ROM monitor.
@@ -200,7 +215,8 @@ L1873                       := $1873
 
     ; Temporary variables.
     ZP_TMP_1:       .res 1
-    ZP_TMP_2:       .res 1
+    ZP_TMP_2:       .res 1 ; Must follow ZP+TMP_1.
+    ZP_TMP_W:       .res 2
 
     ; Define variables used with the UART.
     .if (!USE_SIMULATOR) && (!USE_USB_FOR_IO)
