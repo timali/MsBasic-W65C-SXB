@@ -12,7 +12,7 @@
 
 ; Called to allow the platform port to initialize itself.
 ; May use any registers without preserving their contents.
-PLATFORM_INIT:
+PLATFORM_IO_INIT:
         rts
 
 ; Outputs the character in A.

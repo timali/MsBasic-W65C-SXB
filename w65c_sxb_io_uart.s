@@ -36,9 +36,9 @@
                 sei
 .endmacro
 
-; Called to allow the platform port to initialize itself.
+; Called to allow the platform IO port to initialize itself.
 ; May use any registers without preserving their contents.
-PLATFORM_INIT:
+PLATFORM_IO_INIT:
 
         ; Perform a soft-reset of the ACIA.
         lda     #$00

@@ -1,5 +1,9 @@
 .segment "INIT"
 
+.ifdef W65C_SXB
+      .include "w65c_sxb_platform.s"
+.endif
+
 .ifdef KBD
 FNDLIN2:
         php

@@ -6,7 +6,7 @@
 
 ; 0: Run BASIC from system RAM.
 ; 1: Run BASIC from ROM. Currently requires the custom-ROM monitor.
-USE_ROM                     = 0
+USE_ROM                     = 1
 
 ; 0: Use the Kowalski 6502 simulator instead of the real SXB hardware.
 ; 1: Use the 65X-SXB hardware.
@@ -18,7 +18,7 @@ USE_USB_FOR_IO              = 0
 
 ; 0: Use the standard factory ROM monitor.
 ; 1: Use a custom-built ROM monitor (https://github.com/timali/W65C816SXB-Custom-ROM).
-USE_CUST_ROM_MONITOR        = 0
+USE_CUST_ROM_MONITOR        = 1
 
 ; When using the UART, specify the baud rate.
 ; 0:    115200
@@ -113,12 +113,19 @@ WIDTH                       := 80
 WIDTH2                      := 56
 
 .if (USE_ROM)
-    ; BASIC is in ROM, so the start of available RAM is right after the stack.
-    RAMSTART2               := $0200
+
+    ; When running from ROM, execute the code that accesses FLASH right after the
+    ; stack. It gets copied there from ROM during initialization.
+    FLASH_RUN_START         := $0200;
+
+    ; BASIC is in ROM, so the start of available RAM is right after the code that
+    ; accesses the FLASH memory.
+    RAMSTART2               := FLASH_RUN_START + __FLASH_CODE_SIZE__
 
     ; Place BASIC at the beginning of flash memory. This is possible because we
     ; are running a custom ROM monitor, which makes this region available.
     BAS_START               := $8000
+
 .else
     ; Place BASIC right after the stack in RAM.
     BAS_START               := $0200
@@ -129,10 +136,17 @@ WIDTH2                      := 56
     .import                 __EXTRA_RUN__
     RAMSTART2               := __EXTRA_RUN__
 
+    ; When running from RAM, we can execute the code that accesses FLASH directly
+    ; from its load location, so place it there.
+    FLASH_RUN_START         := __FLASH_CODE_LOAD__
+
 .endif
 
 ; Export this so the linker knows where to place the BASIC image.
 .export BAS_START
+
+; Export this so the linker knows where to place the FLASH access code.
+.export FLASH_RUN_START
 
 ; The start of reserved memory (prevent overwriting monitor work-RAM).
 RAMEND                      := $7E00

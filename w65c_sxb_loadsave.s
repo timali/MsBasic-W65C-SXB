@@ -120,82 +120,6 @@ SAVE:
         ldy     #>QT_TOO_BIG
         jmp     STROUT
 
-; Erases the flash sector containing the address contained in ZP_TMP_W.
-ERASE_FLASH_SECTOR:
-
-        ; Disable interrupts to ensure FLASH access sequence is not interrupted.
-        PLATFORM_SEI
-
-        .if (PERFORM_FLASH_OPERATIONS)
-
-        ; Prepare the FLASH for erasing a sector.
-        lda     #$AA
-        sta     $8000+$5555
-        lda     #$55
-        sta     $8000+$2AAA
-        lda     #$80
-        sta     $8000+$5555
-        lda     #$AA
-        sta     $8000+$5555
-        lda     #$55
-        sta     $8000+$2AAA
-        lda     #$30
-
-        ; Initialiate the erase by writing to any byte within the sector.
-        sta     (ZP_TMP_W)
-
-@Check_For_Erase_Complete:
-        lda     (ZP_TMP_W)
-        cmp     #$FF
-        bne     @Check_For_Erase_Complete
-
-        .endif
-
-        ; It is now safe to reenable interrupts.
-        PLATFORM_CLI
-
-        rts
-
-; Writes the byte in A to the FLASH memory pointed to by ZP_TMP_W. The pointer at
-; ZP_TMP_W will automatically be incremented to the next address.
-WRITE_FLASH_BYTE:
-
-        ; Disable interrupts to ensure FLASH access sequence is not interrupted.
-        PLATFORM_SEI
-
-        .if PERFORM_FLASH_OPERATIONS
-
-        ; Issue the sequence to unlock the FLASH memory to write a byte.
-        ldx     #$AA
-        stx     $8000 + $5555
-        ldx     #$55
-        stx     $8000 + $2AAA
-        ldx     #$A0
-        stx     $8000 + $5555
-
-        ; A holds the byte to write. Store it at the address pointed to by ZP_TMP_W.
-        sta     (ZP_TMP_W)
-
-        ; Wait until the write has completed. It should take at most 20 us.
-@Check_For_Write_Complete:
-        cmp     (ZP_TMP_W)
-        bne     @Check_For_Write_Complete
-
-        .endif
-
-        ; It is now safe to reenable interrupts.
-        ; BUT INTERRUPTS ARE ONLY ENABLED TO START WITH FOR UART builds.
-        ; So only enable interrupts here if there were originally enabled.
-        PLATFORM_CLI
-
-        ; Move to the next address.
-        inc     ZP_TMP_W
-        bne     @Skip_Msb
-        inc     ZP_TMP_W+1
-@Skip_Msb:
-
-        rts
-
 ; Loads the current program from FLASH memory. The program must be loaded to the
 ; area pointed to by TXTTAB, and then VARTAB must be set to point immediately
 ; after the program.
@@ -301,3 +225,88 @@ QT_NO_PROGRAM:
 QT_LOADED:
         .byte   "LOADED"
         .byte   $0D,$0A,$00
+
+; Save the current segment so we can restore it when we're done.
+.pushseg
+
+; Put everything that modifies the FLASH memory in a special section. When built
+; to run from FLASH, this section is linked to execute from RAM, and is copied to
+; RAM on startup.
+.segment "FLASH_CODE"
+
+; Erases the flash sector containing the address contained in ZP_TMP_W.
+ERASE_FLASH_SECTOR:
+
+        ; Disable interrupts to ensure FLASH access sequence is not interrupted.
+        PLATFORM_SEI
+
+        .if (PERFORM_FLASH_OPERATIONS)
+
+        ; Prepare the FLASH for erasing a sector.
+        lda     #$AA
+        sta     $8000+$5555
+        lda     #$55
+        sta     $8000+$2AAA
+        lda     #$80
+        sta     $8000+$5555
+        lda     #$AA
+        sta     $8000+$5555
+        lda     #$55
+        sta     $8000+$2AAA
+        lda     #$30
+
+        ; Initialiate the erase by writing to any byte within the sector.
+        sta     (ZP_TMP_W)
+
+@Check_For_Erase_Complete:
+        lda     (ZP_TMP_W)
+        cmp     #$FF
+        bne     @Check_For_Erase_Complete
+
+        .endif
+
+        ; It is now safe to reenable interrupts.
+        PLATFORM_CLI
+
+        rts
+
+; Writes the byte in A to the FLASH memory pointed to by ZP_TMP_W. The pointer at
+; ZP_TMP_W will automatically be incremented to the next address.
+WRITE_FLASH_BYTE:
+
+        ; Disable interrupts to ensure FLASH access sequence is not interrupted.
+        PLATFORM_SEI
+
+        .if PERFORM_FLASH_OPERATIONS
+
+        ; Issue the sequence to unlock the FLASH memory to write a byte.
+        ldx     #$AA
+        stx     $8000 + $5555
+        ldx     #$55
+        stx     $8000 + $2AAA
+        ldx     #$A0
+        stx     $8000 + $5555
+
+        ; A holds the byte to write. Store it at the address pointed to by ZP_TMP_W.
+        sta     (ZP_TMP_W)
+
+        ; Wait until the write has completed. It should take at most 20 us.
+@Check_For_Write_Complete:
+        cmp     (ZP_TMP_W)
+        bne     @Check_For_Write_Complete
+
+        .endif
+
+        ; It is now safe to reenable interrupts.
+        PLATFORM_CLI
+
+        ; Move to the next address.
+        inc     ZP_TMP_W
+        bne     @Skip_Msb
+        inc     ZP_TMP_W+1
+@Skip_Msb:
+
+        rts
+
+; Restore the previous segment in use.
+.popseg
