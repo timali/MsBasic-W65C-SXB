@@ -1,0 +1,48 @@
+	; Enable the 65C02 enhanced opcodes.
+	.OPT Proc65c02
+
+	; Our user-program is located here.
+	.ORG 	$7D00
+
+; The floating-point accumulator. The location is constant for this port, and does not
+; change if the code is rebuilt, or if the code is running from RAM or ROM.
+FAC	= $AE
+
+	; Convert the argument supplied to USR to a 16-bit integer. The docs
+	; say that this function stores the value in Y,A, but this is not
+	; true. Instead, the value is stored in FAC+3 and FAC+4, and must
+	; manually be moved into Y,A if desired.
+	JSR	ConvertUsrArgToInt16
+
+	; Put the MSB in A
+	LDA	FAC+3
+
+	; Put the LSB in Y
+	LDY	FAC+4
+
+	; Add one to the argument.
+	INY
+	BNE	SkipMsb
+	INA
+
+SkipMsb:
+
+	; Now return the modified A and Y registers back as the result from USR.
+	JSR	StoreAYToFloat
+
+	; Return from the USR function.
+	RTS
+
+	; Converts the value on the floating point accumulator (FAC) to an Int16,
+	; with the MSB in FAC+3 and the LSB in FAC+4.
+ConvertUsrArgToInt16:
+	; There is no JSR (addr) call, so use a JMPs instead. This jumps to the
+	; AYINT function in the code, which returns with an RTS.
+	JMP	($0006)
+
+	; Converts the 16-bit value given in Y (LSB) and A (MSB) to a floating
+	; point value on the floating point accumulator.
+StoreAYToFloat:
+	; There is no JSR (addr) call, so use a JMPs instead. This jumps to the
+	; GIVAYF function in the code, which returns with an RTS.
+	JMP	($0008)

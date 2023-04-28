@@ -1,0 +1,25 @@
+10 REM Demonstrates how to use the USR feature on W65Cx-SXB MS-BASIC.
+20 REM Alicie, 2023
+30 REM
+40 REM First, we need to reserve some RAM for our assembly program.
+50 REM One way is to reserve the top of RAM when starting BASIC.
+60 REM Let's reserve 256 bytes of memory at $7D00 (the monitor starts
+70 REM at $7E00). When BASIC asks for "MEMORY SIZE?", specify the top
+80 REM memory address, so type 32000.
+90 REM
+
+100 REM Poke our assembly into RAM at $7D00. 
+200 FOR I=32000 TO 32020
+300 READ D: POKE I,D: NEXT
+
+600 REM Here are the assembly bytes. See USR_Demo.65S.
+610 DATA 32,15,125, 165,177, 164,178, 200, 208,1, 26, 32,18,125
+620 DATA 96, 108,6,0, 108,8,0
+
+700 REM The ASM addr goes into $DE and $DF (LSB-First).
+710 POKE 222,0
+720 POKE 223,125
+
+800 REM Now we can make the USR call.
+810 INPUT "Enter a value:";V
+820 ? "USR(";V;")=";USR(V)

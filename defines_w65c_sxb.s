@@ -6,7 +6,7 @@
 
 ; 0: Run BASIC from system RAM.
 ; 1: Run BASIC from ROM. Currently requires the custom-ROM monitor.
-USE_ROM                     = 1
+USE_ROM                     = 0
 
 ; 0: Use the Kowalski 6502 simulator instead of the real SXB hardware.
 ; 1: Use the 65X-SXB hardware.
@@ -127,6 +127,7 @@ WIDTH2                      := 56
     BAS_START               := $8000
 
 .else
+
     ; Place BASIC right after the stack in RAM.
     BAS_START               := $0200
 
@@ -138,6 +139,7 @@ WIDTH2                      := 56
 
     ; When running from RAM, we can execute the code that accesses FLASH directly
     ; from its load location, so place it there.
+    .import __FLASH_CODE_LOAD__
     FLASH_RUN_START         := __FLASH_CODE_LOAD__
 
 .endif
