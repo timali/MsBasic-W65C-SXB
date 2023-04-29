@@ -206,6 +206,11 @@ SAVE_FLASH_SIZE             := SAVE_FLASH_END - SAVE_FLASH_START
     MON_PTR_RX_DATA         := MON_PTR_TBL + $06
     MON_PTR_TX_DATA         := MON_PTR_TBL + $08
 
+    ; These routines are only available in the customized monitor.
+.if USE_CUST_ROM_MONITOR
+    MON_PTR_WAIT_USB_FIFO   := MON_PTR_TBL + $18
+.endif
+
     ; The ACIA registers.
     ACIA_BASE               := $7F80
     ACIA_DATA               := ACIA_BASE + $00
